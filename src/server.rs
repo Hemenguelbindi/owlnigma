@@ -1,5 +1,5 @@
 use std::io;
-
+use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use crate::utils::print_owl;
@@ -12,39 +12,58 @@ impl ServerOwl {
         ServerOwl{}
     }
 
-    pub async fn run_server(&self, addres: &str)-> io::Result<()>{
+    pub async fn run_server(&self, address: &str) -> io::Result<()> {
         print_owl();
         println!("[ ] Server up...");
-        let listener = TcpListener::bind(addres).await.expect("Server error");
-        println!("[ ] Server listening {}", addres);
+        let listener = TcpListener::bind(address).await.expect("Server error");
+        println!("[ ] Server listening {}", address);
+
+        let owl = Arc::new(*self);
         loop {
             let (socket, _) = listener.accept().await?;
-            self.process_client(socket).await;
+            let owl_clone = Arc::clone(&owl);
+            tokio::spawn(async move {
+                owl_clone.process_client(socket).await;
+            });
         }
     }
 
-    async fn process_client(self, mut socket: TcpStream){
-        tokio::spawn( async move {
-            let mut  buffer = vec![0; 1024];
-    
-            let read_client = socket.read(&mut buffer[..]).await.expect("Error read data");
-            
-            if read_client > 0 {
-                if self.new_connection(&mut buffer, &mut socket).await {
-                    socket.write_all(b"Hello, I'm a server").await.expect("Error write data");
-                }
-            }
-        });
-    }
+    async fn process_client(&self, mut socket: TcpStream) {
+        let mut buffer = vec![0; 1024];
+        let read_client = socket.read(&mut buffer).await.expect("Error reading data");
 
-    async fn new_connection(&self, buffer: &mut Vec<u8>, socket: &mut TcpStream) -> bool {
-        let message = String::from_utf8_lossy(&mut buffer[..]);
-
-        if message == "Knock knock!"{
-            socket.write_all(b"Who there?").await.expect("Error write data");
+        if read_client == 0 {
+            return;
         }
-        return true;
+        self.inspect(ServerHandlers::NewConnections, &mut buffer, &mut socket).await;
     }
-        
 
+    async fn inspect(&self, event: ServerHandlers, buffer: &mut Vec<u8>, socket: &mut TcpStream) {
+        match event {
+            ServerHandlers::NewConnections => {
+                NewConnections::new_connection(buffer, socket).await;
+            },
+        }
+    }
 }
+
+enum ServerHandlers {
+    NewConnections,
+}
+
+struct NewConnections;
+
+impl NewConnections {
+    async fn new_connection(buffer: &mut Vec<u8>, socket: &mut TcpStream) {
+        println!("[ ] New connection!");
+        let message = String::from_utf8_lossy(&buffer[..]);
+        println!("[ ] Message received: {}", message);
+
+        if message.trim() == "Knock knock!" {
+            println!("[ ] Sending response: Who's there?");
+            socket.write_all(b"Who's there?").await.expect("Error writing data");
+            println!("[ ] Response sent!");
+        }
+    }
+}
+
