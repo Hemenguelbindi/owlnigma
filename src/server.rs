@@ -42,7 +42,7 @@ impl ServerOwl {
         ServerOwl {}
     }
 
-    // Запуск сервера
+
     pub async fn run_server(&self, address: &str) -> io::Result<()> {
         print_owl();
         println!("[ ] Server up...");
@@ -59,7 +59,7 @@ impl ServerOwl {
         }
     }
 
-    // Обработка клиента
+    
     async fn process_client(&self, mut socket: TcpStream) {
 
         let mut buffer = vec![0; 1024];
