@@ -4,22 +4,35 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use crate::utils::print_owl;
 
-// Определяем перечисление для команд
-#[derive(Debug)]
+
+trait Command {
+    async fn execute(&self, socket: &mut TcpStream);
+}
+
+
 enum Updates {
-    NewConnection,
+    NewConnection(NewConnection),
     Unknown,
 }
 
 impl Updates {
-    // Преобразуем входящие данные в команду
-    fn from_input(input: &str) -> Self {
+    pub async fn from_input(input: &str) -> Self {
         match input {
-            "Knock knock!" => Updates::NewConnection,
+            "Knock knock!" => Updates::NewConnection(NewConnection),
             _ => Updates::Unknown,
         }
     }
+
 }
+
+struct NewConnection;
+
+impl Command for NewConnection {
+    async fn execute(&self, socket: &mut TcpStream) {
+        socket.write_all(b"How there?\n").await.expect("Error writing data");
+    }
+}
+    
 
 #[derive(Debug, Clone, Copy)]
 pub struct ServerOwl;
@@ -48,6 +61,7 @@ impl ServerOwl {
 
     // Обработка клиента
     async fn process_client(&self, mut socket: TcpStream) {
+
         let mut buffer = vec![0; 1024];
         let read_client = socket.read(&mut buffer).await.expect("Error reading data");
 
@@ -55,25 +69,40 @@ impl ServerOwl {
             return;
         }
 
-        // Преобразуем входящие данные в строку
         let received = String::from_utf8_lossy(&buffer[..read_client]).trim().to_string();
 
-        // Определяем команду
-        let command = Updates::from_input(&received);
-
-        // Обрабатываем команду
-        self.handle_client(command, &mut socket).await;
-    }
-
-    // Метод для обработки команды
-    async fn handle_client(&self, command: Updates, socket: &mut TcpStream) {
+        
+        let command = Updates::from_input(&received).await;
+        
         match command {
-            Updates::NewConnection => {
-                socket.write_all(b"Hello there! New connection established.\n").await.expect("Error writing data");
-            }
-            Updates::Unknown => {
-                socket.write_all(b"Unknown command\n").await.expect("Error writing data");
-            }
+            Updates::NewConnection(command) => command.execute(&mut socket).await,
+            Updates::Unknown => socket.write_all(b"I don't understand you\n").await.expect("Error writing data"),
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
