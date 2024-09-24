@@ -70,7 +70,7 @@ impl ServerOwl {
         }
 
         let received = String::from_utf8_lossy(&buffer[..read_client]).trim().to_string();
-
+        println!("[ ] Client: {}", received);
         
         let command = Updates::from_input(&received).await;
         
