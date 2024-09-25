@@ -2,13 +2,13 @@ use std::io;
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use crate::black_data::{decrypt_data, encrypt_data};
+use crate::constant::SECRET_KEY;
 use crate::utils::print_owl;
-
 
 trait Command {
     async fn execute(&self, socket: &mut TcpStream);
 }
-
 
 enum Updates {
     NewConnection(NewConnection),
@@ -16,23 +16,25 @@ enum Updates {
 }
 
 impl Updates {
-    pub async fn from_input(input: &str) -> Self {
-        match input {
+    pub async fn from_input(input: &[u8]) -> Self {
+        let input_str = String::from_utf8_lossy(input);
+        match input_str.trim() {
             "Knock knock!" => Updates::NewConnection(NewConnection),
             _ => Updates::Unknown,
         }
     }
-
 }
 
 struct NewConnection;
 
 impl Command for NewConnection {
     async fn execute(&self, socket: &mut TcpStream) {
-        socket.write_all(b"How there?\n").await.expect("Error writing data");
+        let message = b"How there?\n";
+        let crypto_data = encrypt_data(message, &SECRET_KEY);
+        socket.write_u32(crypto_data.len() as u32).await.expect("Error writing length");
+        socket.write_all(&crypto_data).await.expect("Error writing data");
     }
 }
-    
 
 #[derive(Debug, Clone, Copy)]
 pub struct ServerOwl;
@@ -41,7 +43,6 @@ impl ServerOwl {
     pub fn new() -> ServerOwl {
         ServerOwl {}
     }
-
 
     pub async fn run_server(&self, address: &str) -> io::Result<()> {
         print_owl();
@@ -59,50 +60,27 @@ impl ServerOwl {
         }
     }
 
-    
     async fn process_client(&self, mut socket: TcpStream) {
+        let mut length_buffer = [0u8; 4];
 
-        let mut buffer = vec![0; 1024];
-        let read_client = socket.read(&mut buffer).await.expect("Error reading data");
+        socket.read_exact(&mut length_buffer).await.expect("Error reading length");
+        let length = u32::from_be_bytes(length_buffer) as usize;
 
-        if read_client == 0 {
-            return;
-        }
+        let mut buffer = vec![0u8; length];
+        socket.read_exact(&mut buffer).await.expect("Error reading data");
 
-        let received = String::from_utf8_lossy(&buffer[..read_client]).trim().to_string();
-        println!("[ ] Client: {}", received);
-        
-        let command = Updates::from_input(&received).await;
-        
+        let decrypted_data = decrypt_data(&buffer, &SECRET_KEY);
+        let command = Updates::from_input(&decrypted_data).await;
+        println!("[ ] Client: {}", String::from_utf8_lossy(&decrypted_data));
+
         match command {
             Updates::NewConnection(command) => command.execute(&mut socket).await,
-            Updates::Unknown => socket.write_all(b"I don't understand you\n").await.expect("Error writing data"),
+            Updates::Unknown => {
+                let message = b"I don't understand you\n";
+                let encrypted_message = encrypt_data(message, &SECRET_KEY);
+                socket.write_u32(encrypted_message.len() as u32).await.expect("Error writing length");
+                socket.write_all(&encrypted_message).await.expect("Error writing data");
+            },
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
