@@ -1,37 +1,46 @@
 use tokio::net::TcpStream;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use crate::black_data::{encrypt_data, decrypt_data};
+use crate::constant::SECRET_KEY;
 use crate::utils::print_owl;
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct ClientOwl;
 
 impl ClientOwl {
-    pub fn new () -> Self {
-        ClientOwl{}
+    pub fn new() -> Self {
+        ClientOwl {}
     }
 
-
-    pub async fn connect (&self, address: &str) -> Result<(), std::io::Error> {
+    pub async fn connect(&self, address: &str) -> Result<(), std::io::Error> {
         print_owl();
         let stream = TcpStream::connect(address).await.expect("Error client");
-        println!("[>] Connect to server...");
-        self.cheack_connect(stream).await;
+        println!("[>] Connected to server...");
+        self.check_connection(stream).await;
         Ok(())
     }
 
+    async fn check_connection(&self, mut stream: TcpStream) {
+        let message = b"Knock knock!";
+        let encrypted_message = encrypt_data(message, &SECRET_KEY);
 
-    async fn cheack_connect(&self, mut stream: TcpStream){
-        let message = "Knock knock!";
-        stream.write_all(message.as_bytes()).await.expect("Error client");
-        println!("[>] Sent message : {}", message);
+        // Отправляем длину зашифрованного сообщения
+        stream.write_u32(encrypted_message.len() as u32).await.expect("Error client");
+        stream.write_all(&encrypted_message).await.expect("Error client");
+        println!("[>] Sent message: Knock knock!");
 
-        let mut buffer = [0; 1024];
-        stream.read(&mut buffer).await.expect("Error client");
-        let response = String::from_utf8_lossy(&buffer);
+        // Читаем длину ответа
+        let mut length_buffer = [0u8; 4];
+        stream.read_exact(&mut length_buffer).await.expect("Error reading length");
+        let length = u32::from_be_bytes(length_buffer) as usize;
 
-        println!("[>] Received message : {}", response);
+        // Читаем зашифрованное сообщение
+        let mut buffer = vec![0u8; length];
+        stream.read_exact(&mut buffer).await.expect("Error client");
+
+        let decrypted_message = decrypt_data(&buffer, &SECRET_KEY);
+        let response = String::from_utf8_lossy(&decrypted_message);
+
+        println!("[>] Received message: {}", response);
     }
-
 }
-
-

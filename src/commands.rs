@@ -18,5 +18,5 @@ pub enum Commands {
     Connect{
         #[arg(default_value="127.0.0.1:5465")]
         address: String,
-    }
+    },
 }

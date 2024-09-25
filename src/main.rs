@@ -3,6 +3,8 @@ mod commands;
 mod qwlnigma_manager;
 mod server;
 mod client;
+mod black_data;
+mod constant;
 use clap::Parser;
 use qwlnigma_manager::QwlnigmaManager;
 
