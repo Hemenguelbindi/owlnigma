@@ -3,7 +3,10 @@ name: Build
 on:
   push:
     branches:
-      -  [ "master" ]
+      - ['master']
+  pull_request:
+    branches:
+      - ['*']
 
 jobs:
   build:
@@ -11,20 +14,31 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        arch: [x64, arm64]
+        arch: [x86_64]
 
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup Rust
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Rust
         uses: actions/setup-rust@v1
         with:
           rust-version: 1.69
+
+      - name: Install cross
+        run: cargo install cross
+
       - name: Build for ${{ matrix.os }} ${{ matrix.arch }}
         run: |
-          cargo build --target ${{ matrix.arch }}-${{ matrix.os }} --release
-          cp target/${{ matrix.arch }}-${{ matrix.os }}/release/your_project ./builds/
+          if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+            cross build --target ${{ matrix.arch }}-unknown-linux-gnu --release
+          else
+            cross build --target ${{ matrix.arch }}-pc-windows-msvc --release
+          fi
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: build
-          path: builds/
+          path: target/${{ matrix.arch }}-unknown-linux-gnu/release/owlnigma
+          path: target/${{ matrix.arch }}-pc-windows-msvc/release/owlnigma.exe
