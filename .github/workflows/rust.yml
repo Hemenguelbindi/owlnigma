@@ -1,7 +1,6 @@
 name: Build and Release
 
 on:
-  # Запуск по ручному триггеру или при создании релиза
   workflow_dispatch:
   release:
     types: [created]
@@ -54,11 +53,15 @@ jobs:
           profile: minimal
           override: true
 
-      # Шаг 3: Сборка исполняемого файла
+      # Шаг 3: Установка переменной окружения с секретом
+      - name: Set up environment
+        run: echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> $GITHUB_ENV
+
+      # Шаг 4: Сборка исполняемого файла
       - name: Build binary
         run: cargo build --release --target ${{ matrix.platform.target }}
 
-      # Шаг 4: Переименование бинарного файла
+      # Шаг 5: Переименование бинарного файла
       - name: Rename binary (Linux and macOS)
         run: mv target/${{ matrix.platform.target }}/release/owlnigma target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}
         if: matrix.platform.os_name != 'Windows-x86_64'
@@ -67,11 +70,11 @@ jobs:
         run: mv target/${{ matrix.platform.target }}/release/owlnigma.exe target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}
         if: matrix.platform.os_name == 'Windows-x86_64'
 
-      # Шаг 5: Создание SHA-256 хеша для бинарного файла
+      # Шаг 6: Создание SHA-256 хеша для бинарного файла
       - name: Generate SHA-256
         run: shasum -a 256 target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }} | cut -d ' ' -f 1 > target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}.sha256
 
-      # Шаг 6: Публикация релиза на GitHub
+      # Шаг 7: Публикация релиза на GitHub
       - name: Release binary and SHA-256 checksum to GitHub
         uses: softprops/action-gh-release@v1
         with:
