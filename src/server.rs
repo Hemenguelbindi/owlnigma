@@ -69,7 +69,7 @@ impl ServerOwl {
         let mut buffer = vec![0u8; length];
         socket.read_exact(&mut buffer).await.expect("Error reading data");
 
-        let decrypted_data = decrypt_data(&buffer, &SECRET_KEY);
+        let decrypted_data = decrypt_data(&buffer, &get_secret_key());
         let command = Updates::from_input(&decrypted_data).await;
         println!("[ ] Client: {}", String::from_utf8_lossy(&decrypted_data));
 
@@ -77,7 +77,7 @@ impl ServerOwl {
             Updates::NewConnection(command) => command.execute(&mut socket).await,
             Updates::Unknown => {
                 let message = b"I don't understand you\n";
-                let encrypted_message = encrypt_data(message, &SECRET_KEY);
+                let encrypted_message = encrypt_data(message, &get_secret_key());
                 socket.write_u32(encrypted_message.len() as u32).await.expect("Error writing length");
                 socket.write_all(&encrypted_message).await.expect("Error writing data");
             },

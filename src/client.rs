@@ -1,7 +1,7 @@
 use tokio::net::TcpStream;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use crate::black_data::{encrypt_data, decrypt_data};
-use crate::constant::SECRET_KEY;
+use crate::build::get_secret_key;
 use crate::utils::print_owl;
 
 #[derive(Debug, Clone)]
@@ -22,7 +22,7 @@ impl ClientOwl {
 
     async fn check_connection(&self, mut stream: TcpStream) {
         let message = b"Knock knock!";
-        let encrypted_message = encrypt_data(message, &SECRET_KEY);
+        let encrypted_message = encrypt_data(message, &get_secret_key());
 
         // Отправляем длину зашифрованного сообщения
         stream.write_u32(encrypted_message.len() as u32).await.expect("Error client");
@@ -38,7 +38,7 @@ impl ClientOwl {
         let mut buffer = vec![0u8; length];
         stream.read_exact(&mut buffer).await.expect("Error client");
 
-        let decrypted_message = decrypt_data(&buffer, &SECRET_KEY);
+        let decrypted_message = decrypt_data(&buffer, &get_secret_key());
         let response = String::from_utf8_lossy(&decrypted_message);
 
         println!("[>] Received message: {}", response);
