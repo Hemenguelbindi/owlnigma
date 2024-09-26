@@ -1,17 +1,19 @@
-name: build and release
+name: Build and Release
 
 on:
+  # Запуск по ручному триггеру или при создании релиза
   workflow_dispatch:
   release:
-    types: [ created ]
+    types: [created]
 
 permissions:
   contents: write
 
 jobs:
   build:
-    name: ${{ matrix.platform.os_name }} with rust ${{ matrix.toolchain }}
+    name: Build on ${{ matrix.platform.os_name }} with Rust ${{ matrix.toolchain }}
     runs-on: ${{ matrix.platform.os }}
+
     strategy:
       fail-fast: false
       matrix:
@@ -38,27 +40,47 @@ jobs:
             bin: owlnigma-darwin-arm64
         toolchain:
           - stable
+
     steps:
+      # Шаг 1: Checkout репозиторий
       - uses: actions/checkout@v3
-      - name: Build binary
-        uses: houseabsolute/actions-rust-cross@v0
+
+      # Шаг 2: Установка инструментов Rust и кросс-компиляция
+      - name: Install Rust toolchain and dependencies
+        uses: actions-rs/toolchain@v1
         with:
-          command: "build"
-          target: ${{ matrix.platform.target }}
           toolchain: ${{ matrix.toolchain }}
-          args: "--locked --release"
-          strip: true
-      - name: Rename binary (linux and macos)
+          target: ${{ matrix.platform.target }}
+          profile: minimal
+          override: true
+
+      # Шаг 3: Сборка исполняемого файла
+      - name: Build binary
+        run: cargo build --release --target ${{ matrix.platform.target }}
+
+      # Шаг 4: Переименование бинарного файла
+      - name: Rename binary (Linux and macOS)
         run: mv target/${{ matrix.platform.target }}/release/owlnigma target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}
         if: matrix.platform.os_name != 'Windows-x86_64'
-      - name: Rename binary (windows)
+
+      - name: Rename binary (Windows)
         run: mv target/${{ matrix.platform.target }}/release/owlnigma.exe target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}
         if: matrix.platform.os_name == 'Windows-x86_64'
+
+      # Шаг 5: Создание SHA-256 хеша для бинарного файла
       - name: Generate SHA-256
         run: shasum -a 256 target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }} | cut -d ' ' -f 1 > target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}.sha256
+
+      # Шаг 6: Публикация релиза на GitHub
       - name: Release binary and SHA-256 checksum to GitHub
         uses: softprops/action-gh-release@v1
         with:
           files: |
             target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}
             target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Дополнительный шаг: Вывод файлов в директории для отладки
+      - name: List built files
+        run: ls -la target/${{ matrix.platform.target }}/release/
