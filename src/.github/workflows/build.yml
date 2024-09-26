@@ -1,0 +1,30 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        arch: [x64, arm64]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Rust
+        uses: actions/setup-rust@v1
+        with:
+          rust-version: 1.69
+      - name: Build for ${{ matrix.os }} ${{ matrix.arch }}
+        run: |
+          cargo build --target ${{ matrix.arch }}-${{ matrix.os }} --release
+          cp target/${{ matrix.arch }}-${{ matrix.os }}/release/your_project ./builds/
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build
+          path: builds/
