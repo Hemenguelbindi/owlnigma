@@ -1,5 +1,7 @@
 use rand::Rng;
 
+
+
 pub fn print_owl() {
     let owl = r#"
        ___
@@ -32,3 +34,4 @@ pub fn print_owl() {
     // Вывод совы с рандомным цветом
     println!("{}{}{}", random_color, owl, reset);
 }
+

@@ -2,18 +2,20 @@ use std::io;
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use crate::black_data::{decrypt_data, encrypt_data};
-use crate::constant::SECRET_KEY;
+use crate::black_data::{decrypt_data, encrypt_data, get_secret_key};
 use crate::utils::print_owl;
+
 
 trait Command {
     async fn execute(&self, socket: &mut TcpStream);
 }
 
+
 enum Updates {
     NewConnection(NewConnection),
     Unknown,
 }
+
 
 impl Updates {
     pub async fn from_input(input: &[u8]) -> Self {
@@ -25,7 +27,9 @@ impl Updates {
     }
 }
 
+
 struct NewConnection;
+
 
 impl Command for NewConnection {
     async fn execute(&self, socket: &mut TcpStream) {
@@ -36,8 +40,10 @@ impl Command for NewConnection {
     }
 }
 
+
 #[derive(Debug, Clone, Copy)]
 pub struct ServerOwl;
+
 
 impl ServerOwl {
     pub fn new() -> ServerOwl {

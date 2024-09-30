@@ -1,6 +1,9 @@
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Nonce};
 use rand::Rng;
+use std::env;
+use base64;
+
 
 pub fn encrypt_data(plaintext: &[u8], key: &[u8]) -> Vec<u8> {
     let cipher = Aes256Gcm::new(key.into());
@@ -24,3 +27,12 @@ pub fn decrypt_data(ciphertext: &[u8], key: &[u8]) -> Vec<u8> {
     plaintext
 }
 
+
+pub fn get_secret_key() -> [u8; 32] {
+    let secret_key_base64 = env::var("SECRET_KEY").expect("SECRET_KEY is not set");
+
+    base64::decode(&secret_key_base64)
+        .expect("Failed to decode SECRET_KEY")
+        .try_into()
+        .expect("Invalid key length, expected 32 bytes")
+}
