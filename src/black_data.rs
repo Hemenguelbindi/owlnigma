@@ -2,7 +2,7 @@ use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Nonce};
 use rand::Rng;
 use std::env;
-use base64;
+use base64::{engine::general_purpose, Engine};
 
 
 pub fn encrypt_data(plaintext: &[u8], key: &[u8]) -> Vec<u8> {
@@ -29,10 +29,16 @@ pub fn decrypt_data(ciphertext: &[u8], key: &[u8]) -> Vec<u8> {
 
 
 pub fn get_secret_key() -> [u8; 32] {
+    // Получаем переменную окружения
     let secret_key_base64 = env::var("SECRET_KEY").expect("SECRET_KEY is not set");
 
-    base64::decode(&secret_key_base64)
-        .expect("Failed to decode SECRET_KEY")
+    // Используем новый API для декодирования
+    let decoded_key = general_purpose::STANDARD
+        .decode(&secret_key_base64)
+        .expect("Failed to decode SECRET_KEY");
+
+    // Проверяем, что ключ правильной длины
+    decoded_key
         .try_into()
         .expect("Invalid key length, expected 32 bytes")
 }

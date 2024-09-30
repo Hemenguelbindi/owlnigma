@@ -34,7 +34,7 @@ struct NewConnection;
 impl Command for NewConnection {
     async fn execute(&self, socket: &mut TcpStream) {
         let message = b"How there?\n";
-        let crypto_data = encrypt_data(message, &SECRET_KEY);
+        let crypto_data = encrypt_data(message, &get_secret_key());
         socket.write_u32(crypto_data.len() as u32).await.expect("Error writing length");
         socket.write_all(&crypto_data).await.expect("Error writing data");
     }
