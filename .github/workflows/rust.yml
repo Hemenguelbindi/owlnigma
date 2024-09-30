@@ -1,6 +1,7 @@
 name: Build and Release
 
 on:
+  # Запуск по ручному триггеру или при создании релиза
   workflow_dispatch:
   release:
     types: [created]
@@ -60,12 +61,19 @@ jobs:
         run: mv target/${{ matrix.platform.target }}/release/owlnigma target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}
         if: matrix.platform.os_name != 'Windows-x86_64'
 
+
       - name: Rename binary (Windows)
         run: mv target/${{ matrix.platform.target }}/release/owlnigma.exe target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}
         if: matrix.platform.os_name == 'Windows-x86_64'
 
       - name: Generate SHA-256
         run: shasum -a 256 target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }} | cut -d ' ' -f 1 > target/${{ matrix.platform.target }}/release/${{ matrix.platform.bin }}.sha256
+        if: matrix.platform.os_name != 'Windows-x86_64'
+      
+      - name: Generate SHA-256 (Windows)
+        run: certutil -hashfile target\${{ matrix.platform.target }}\release\${{ matrix.platform.bin }} SHA256 > target\${{ matrix.platform.target }}\release\${{ matrix.platform.bin }}.sha256
+        if: matrix.platform.os_name == 'Windows-x86_64'
+
 
       - name: Release binary and SHA-256 checksum to GitHub
         uses: softprops/action-gh-release@v1
@@ -76,5 +84,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: List built files
+      - name: List built files (Linux and macOS)
         run: ls -la target/${{ matrix.platform.target }}/release/
+        if: matrix.platform.os_name != 'Windows-x86_64'
+
+      - name: List built files (Windows)
+        run: dir target\${{ matrix.platform.target }}\release\
+        if: matrix.platform.os_name == 'Windows-x86_64'
