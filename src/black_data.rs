@@ -42,3 +42,27 @@ pub fn get_secret_key() -> [u8; 32] {
         .try_into()
         .expect("Invalid key length, expected 32 bytes")
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+
+    #[test]
+    fn test_encrypt_and_desrypt() {
+        let key = get_secret_key();
+        let data = b"Hello world!";
+        let encrypted = encrypt_data(data, &key);
+        assert_ne!(data, &encrypted[..]);
+
+        let decrypted = decrypt_data(&encrypted, &key);
+        assert_eq!(data, &decrypted[..]);
+    }
+
+    #[test]
+    fn test_get_secret_key() {
+        let key = get_secret_key();
+        assert_eq!(key.len(), 32);
+    }
+}

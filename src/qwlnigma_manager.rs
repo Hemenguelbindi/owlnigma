@@ -24,6 +24,10 @@ impl QwlnigmaManager {
                 let client = ClientOwl::new();
                 client.connect(&address).await.expect("Error commands");
             }
+            Commands::SendFile{address,filename} =>{
+                let cliet = ClientOwl::new();
+                cliet.send_file(&filename,&address).await;
+            }
        }
     }
 }
