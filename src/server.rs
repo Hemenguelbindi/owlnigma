@@ -6,12 +6,14 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt, BufWriter};
 use crate::black_data::{decrypt_data, encrypt_data, get_secret_key};
 use crate::utils::print_owl;
 
-
+/// trait for commands to the server. Commands are executed by the server.
+/// Типаж создания команд для сервера (команды)отправляются серверу. 
 trait Command {
     async fn execute(&self, socket: &mut TcpStream);
 }
 
-
+/// Updates to the server from the client
+/// Перечесления в котором создаются все обновления от клиента.
 enum Updates {
     NewConnection(NewConnection),
     Upload(Upload),
@@ -30,9 +32,9 @@ impl Updates {
     }
 }
 
-
+///New connection to the serverю
+/// Команда для обработки нового подключения к серверу.
 struct NewConnection;
-
 
 impl Command for NewConnection {
     async fn execute(&self, socket: &mut TcpStream) {
@@ -43,6 +45,9 @@ impl Command for NewConnection {
     }
 }
 
+
+/// Upload file to the server
+/// Команда для отправки файла на сервер.
 struct Upload;
 
 impl Command for Upload {
